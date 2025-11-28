@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #3498db;
+            text-align: center;
+        }
+
+        .menu-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.3s;
+            color: #ecf0f1;
+        }
+
+        .menu-item:hover {
+            background: #34495e;
+        }
+
+        .menu-item.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #34495e;
+        }
+
+        .sidebar-footer a {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-footer img {
+            width: 135px;
+            border-radius: 4px;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 40px;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 22px;
+            margin-top: 30px;
+        }
+
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            background: #f8f9fa;
+            border-color: #2980b9;
+        }
+
+        .upload-area.dragover {
+            background: #e8f4f8;
+            border-color: #2980b9;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .filter-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .filter-group input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card.green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .stat-card.orange {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-card.blue {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .top-list {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .top-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .top-item:last-child {
+            border-bottom: none;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #95a5a6;
+        }
+
+        .instructions {
+            line-height: 1.8;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            margin-top: 15px;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #e8f4f8;
+            color: #2980b9;
+            border-left: 4px solid #3498db;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .results-count {
+            margin: 15px 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-title">Connection Analyzer</div>
+            <div class="menu-item active" data-page="getting-started">Getting Started</div>
+            <div class="menu-item" data-page="upload">Upload CSV</div>
+            <div class="menu-item" data-page="analysis">Analysis</div>
+            <div class="menu-item" data-page="summary">Summary</div>
+            <div class="menu-item" data-page="statsdrone">StatsDrone</div>
+            <div class="menu-item" data-page="affiliate-track">Affiliate Track</div>
+            <div class="menu-item" data-page="onlyigaming">Review StatsDrone at OnlyiGaming</div>
+            
+            <div class="sidebar-footer">
+                <a href="https://affiliatetrack.io" target="_blank">
+                    <img src="https://i.ibb.co/WZqtLrR/Affiliate-Track-by-Stats-Drone-dark.png" alt="Affiliate Track by StatsDrone">
+                </a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Getting Started Page -->
+            <div class="page active" id="getting-started">
+                <div class="card">
+                    <h1>Welcome to Connection Analyzer</h1>
+                    <div class="alert alert-info">
+                        Analyze your LinkedIn connections to gain insights into your professional network.
+                    </div>
+                    <div class="instructions">
+                        <h2>How to Get Started</h2>
+                        <ol>
+                            <li><strong>Export Your LinkedIn Connections:</strong>
+                                <ul style="margin-top: 8px;">
+                                    <li>Go to LinkedIn and click on "Settings & Privacy"</li>
+                                    <li>Navigate to "Data privacy" section</li>
+                                    <li>Click "Get a copy of your data"</li>
+                                    <li>Select "Connections" and request your archive</li>
+                                    <li>LinkedIn will email you a download link (usually within 10 minutes)</li>
+                                </ul>
+                            </li>
+                            <li><strong>Download the CSV File:</strong> Once you receive the email, download the Connections.csv file to your computer.</li>
+                            <li><strong>Upload to Analyzer:</strong> Click on "Upload CSV" in the menu and upload your Connections.csv file.</li>
+                            <li><strong>Analyze Your Data:</strong> Once uploaded, explore the Analysis and Summary pages to gain insights into your network.</li>
+                        </ol>
+                        
+                        <h2>What You'll Discover</h2>
+                        <p>This tool helps you understand:</p>
+                        <ul style="margin-left: 20px; margin-top: 10px;">
+                            <li>Your most common connections by first name</li>
+                            <li>Top companies in your network</li>
+                            <li>Most common job positions</li>
+                            <li>Connection growth over time</li>
+                            <li>Recent networking activity</li>
+                            <li>Searchable database of all your connections</li>
+                        </ul>
+                        
+                        <p style="margin-top: 20px;">
+                            <strong>Privacy Note:</strong> All data processing happens locally in your browser. Your connection data is never uploaded to any server.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Page -->
+            <div class="page" id="upload">
+                <div class="card">
+                    <h1>Upload Your LinkedIn Connections</h1>
+                    <div class="upload-area" id="uploadArea">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#3498db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 20px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <h2 style="margin-bottom: 10px;">Drop your CSV file here or click to browse</h2>
+                        <p style="color: #7f8c8d;">Supports Connections.csv from LinkedIn</p>
+                        <input type="file" id="csvFile" accept=".csv">
+                    </div>
+                    <div id="uploadStatus"></div>
+                </div>
+            </div>
+
+            <!-- Analysis Page -->
+            <div class="page" id="analysis">
+                <div class="card">
+                    <h1>Connection Analysis</h1>
+                    <div id="analysisContent">
+                        <div class="no-data">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#bdc3c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <h2>No Data Available</h2>
+                            <p>Please upload your LinkedIn Connections CSV file first.</p>
+                            <button class="btn" onclick="navigateTo('upload')" style="margin-top: 20px;">Upload CSV</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Page -->
+            <div class="page" id="summary">
+                <div class="card">
+                    <h1>Network Summary</h1>
+                    <div id="summaryContent">
+                        <div class="no-data">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#bdc3c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <h2>No Data Available</h2>
+                            <p>Please upload your LinkedIn Connections CSV file first.</p>
+                            <button class="btn" onclick="navigateTo('upload')" style="margin-top: 20px;">Upload CSV</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let connectionsData = [];
+        let filteredData = [];
+
+        // Navigation
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const page = this.getAttribute('data-page');
+                
+                // Handle external links
+                if (page === 'statsdrone') {
+                    window.open('https://statsdrone.com', '_blank');
+                    return;
+                }
+                if (page === 'affiliate-track') {
+                    window.open('https://affiliatetrack.io', '_blank');
+                    return;
+                }
+                if (page === 'onlyigaming') {
+                    window.open('https://onlyigaming.com/companies/stats-drone', '_blank');
+                    return;
+                }
+                
+                navigateTo(page);
+            });
+        });
+
+        function navigateTo(pageName) {
+            // Update menu
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-page') === pageName) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageName).classList.add('active');
+
+            // Check if data is needed
+            if ((pageName === 'analysis' || pageName === 'summary') && connectionsData.length === 0) {
+                // Pages will show "no data" message
+            } else if (pageName === 'analysis' && connectionsData.length > 0) {
+                renderAnalysis();
+            } else if (pageName === 'summary' && connectionsData.length > 0) {
+                renderSummary();
+            }
+        }
+
+        // File Upload
+        const uploadArea = document.getElementById('uploadArea');
+        const csvFile = document.getElementById('csvFile');
+
+        uploadArea.addEventListener('click', () => csvFile.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                processFile(file);
+            }
+        });
+
+        csvFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        });
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            // Skip first 3 rows, row 4 is header, data starts at row 5
+            const dataLines = lines.slice(4);
+            
+            connectionsData = [];
+            
+            dataLines.forEach(line => {
+                if (line.trim() === '') return;
+                
+                const values = parseCSVLine(line);
+                if (values.length >= 7) {
+                    connectionsData.push({
+                        firstName: values[0],
+                        lastName: values[1],
+                        url: values[2],
+                        email: values[3],
+                        company: values[4],
+                        position: values[5],
+                        connectedDate: values[6]
+                    });
+                }
+            });
+
+            filteredData = [...connectionsData];
+
+            const statusDiv = document.getElementById('uploadStatus');
+            statusDiv.innerHTML = `
+                <div class="alert alert-success" style="margin-top: 20px;">
+                    <strong>Success!</strong> Loaded ${connectionsData.length} connections. 
+                    <button class="btn" onclick="navigateTo('analysis')" style="margin-left: 15px;">View Analysis</button>
+                </div>
+            `;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            
+            return result;
+        }
+
+        // Analysis Page
+        function renderAnalysis() {
+            const content = document.getElementById('analysisContent');
+            
+            content.innerHTML = `
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label>First Name</label>
+                        <input type="text" id="filterFirstName" placeholder="Search first name...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Last Name</label>
+                        <input type="text" id="filterLastName" placeholder="Search last name...">
+                    </div>
+                    <div class="filter-group">
+                        <label>Position (use - to exclude)</label>
+                        <input type="text" id="filterPosition" placeholder="e.g., CEO or -Manager">
+                    </div>
+                    <div class="filter-group">
+                        <label>Company (use - to exclude)</label>
+                        <input type="text" id="filterCompany" placeholder="e.g., Google or -Amazon">
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                    <button class="btn" onclick="exportFilteredCSV()">Export Filtered Results</button>
+                </div>
+                <div class="results-count" id="resultsCount">Showing ${connectionsData.length} connections</div>
+                <div style="overflow-x: auto;">
+                    <table id="connectionsTable">
+                        <thead>
+                            <tr>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Company</th>
+                                <th>Position</th>
+                                <th>Connected Date</th>
+                                <th>Profile</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            `;
+
+            updateTable();
+
+            // Add filter listeners
+            ['filterFirstName', 'filterLastName', 'filterPosition', 'filterCompany'].forEach(id => {
+                document.getElementById(id).addEventListener('input', applyFilters);
+            });
+        }
+
+        function applyFilters() {
+            const firstName = document.getElementById('filterFirstName').value.toLowerCase();
+            const lastName = document.getElementById('filterLastName').value.toLowerCase();
+            const position = document.getElementById('filterPosition').value;
+            const company = document.getElementById('filterCompany').value;
+
+            filteredData = connectionsData.filter(conn => {
+                // First name filter
+                if (firstName && !conn.firstName.toLowerCase().includes(firstName)) {
+                    return false;
+                }
+
+                // Last name filter
+                if (lastName && !conn.lastName.toLowerCase().includes(lastName)) {
+                    return false;
+                }
+
+                // Position filter with exclude support
+                if (position) {
+                    if (position.startsWith('-')) {
+                        const excludeTerm = position.substring(1).toLowerCase();
+                        if (conn.position.toLowerCase().includes(excludeTerm)) {
+                            return false;
+                        }
+                    } else {
+                        if (!conn.position.toLowerCase().includes(position.toLowerCase())) {
+                            return false;
+                        }
+                    }
+                }
+
+                // Company filter with exclude support
+                if (company) {
+                    if (company.startsWith('-')) {
+                        const excludeTerm = company.substring(1).toLowerCase();
+                        if (conn.company.toLowerCase().includes(excludeTerm)) {
+                            return false;
+                        }
+                    } else {
+                        if (!conn.company.toLowerCase().includes(company.toLowerCase())) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            });
+
+            updateTable();
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            resultsCount.textContent = `Showing ${filteredData.length} of ${connectionsData.length} connections`;
+
+            tbody.innerHTML = filteredData.map(conn => `
+                <tr>
+                    <td>${conn.firstName}</td>
+                    <td>${conn.lastName}</td>
+                    <td>${conn.company}</td>
+                    <td>${conn.position}</td>
+                    <td>${conn.connectedDate}</td>
+                    <td><a href="${conn.url}" target="_blank" style="color: #3498db;">View</a></td>
+                </tr>
+            `).join('');
+        }
+
+        function clearFilters() {
+            document.getElementById('filterFirstName').value = '';
+            document.getElementById('filterLastName').value = '';
+            document.getElementById('filterPosition').value = '';
+            document.getElementById('filterCompany').value = '';
+            filteredData = [...connectionsData];
+            updateTable();
+        }
+
+        function exportFilteredCSV() {
+            if (filteredData.length === 0) {
+                alert('No data to export. Please adjust your filters.');
+                return;
+            }
+
+            // Create CSV content
+            let csvContent = 'First Name,Last Name,URL,Email,Company,Position,Connected On\n';
+            
+            filteredData.forEach(conn => {
+                const row = [
+                    escapeCSVField(conn.firstName),
+                    escapeCSVField(conn.lastName),
+                    escapeCSVField(conn.url),
+                    escapeCSVField(conn.email),
+                    escapeCSVField(conn.company),
+                    escapeCSVField(conn.position),
+                    escapeCSVField(conn.connectedDate)
+                ].join(',');
+                csvContent += row + '\n';
+            });
+
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `linkedin_connections_filtered_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function escapeCSVField(field) {
+            if (field === null || field === undefined) {
+                return '';
+            }
+            
+            // Convert to string
+            field = String(field);
+            
+            // If field contains comma, quote, or newline, wrap in quotes and escape quotes
+            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+                return '"' + field.replace(/"/g, '""') + '"';
+            }
+            
+            return field;
+        }
+
+        // Summary Page
+        function renderSummary() {
+            const content = document.getElementById('summaryContent');
+
+            // Calculate statistics
+            const stats = calculateStats();
+
+            content.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.totalConnections}</div>
+                        <div class="stat-label">Total Connections</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-value">${stats.avgLast7Days}</div>
+                        <div class="stat-label">Avg Last 7 Days</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-value">${stats.avgLast30Days}</div>
+                        <div class="stat-label">Avg Last 30 Days</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-value">${stats.avgLast90Days}</div>
+                        <div class="stat-label">Avg Last 90 Days</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div class="top-list">
+                        <h2 style="margin-top: 0;">Top 10 First Names</h2>
+                        <div id="topNames"></div>
+                    </div>
+                    <div class="top-list">
+                        <h2 style="margin-top: 0;">Top 10 Companies</h2>
+                        <div id="topCompanies"></div>
+                    </div>
+                    <div class="top-list">
+                        <h2 style="margin-top: 0;">Top 10 Positions</h2>
+                        <div id="topPositions"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Connection Growth Over Time</h2>
+                    <div class="chart-container">
+                        <canvas id="growthChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            renderTopLists(stats);
+            renderGrowthChart();
+        }
+
+        function calculateStats() {
+            const now = new Date();
+            const dates = connectionsData.map(c => new Date(c.connectedDate)).filter(d => !isNaN(d));
+
+            // Count connections by time period
+            const last7Days = dates.filter(d => (now - d) / (1000 * 60 * 60 * 24) <= 7).length;
+            const last30Days = dates.filter(d => (now - d) / (1000 * 60 * 60 * 24) <= 30).length;
+            const last90Days = dates.filter(d => (now - d) / (1000 * 60 * 60 * 24) <= 90).length;
+            const last365Days = dates.filter(d => (now - d) / (1000 * 60 * 60 * 24) <= 365).length;
+
+            return {
+                totalConnections: connectionsData.length,
+                avgLast7Days: Math.round(last7Days / 7 * 10) / 10,
+                avgLast30Days: Math.round(last30Days / 30 * 10) / 10,
+                avgLast90Days: Math.round(last90Days / 90 * 10) / 10,
+                avgLast365Days: Math.round(last365Days / 365 * 10) / 10
+            };
+        }
+
+        function renderTopLists(stats) {
+            // Top first names
+            const nameCount = {};
+            connectionsData.forEach(c => {
+                if (c.firstName && c.firstName.trim() !== '') {
+                    nameCount[c.firstName] = (nameCount[c.firstName] || 0) + 1;
+                }
+            });
+            const topNames = Object.entries(nameCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            document.getElementById('topNames').innerHTML = topNames.map(([name, count]) => `
+                <div class="top-item">
+                    <span>${name}</span>
+                    <span style="font-weight: 600;">${count}</span>
+                </div>
+            `).join('');
+
+            // Top companies
+            const companyCount = {};
+            connectionsData.forEach(c => {
+                if (c.company && c.company.trim() !== '') {
+                    companyCount[c.company] = (companyCount[c.company] || 0) + 1;
+                }
+            });
+            const topCompanies = Object.entries(companyCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            document.getElementById('topCompanies').innerHTML = topCompanies.map(([company, count]) => `
+                <div class="top-item">
+                    <span>${company}</span>
+                    <span style="font-weight: 600;">${count}</span>
+                </div>
+            `).join('');
+
+            // Top positions
+            const positionCount = {};
+            connectionsData.forEach(c => {
+                if (c.position && c.position.trim() !== '') {
+                    positionCount[c.position] = (positionCount[c.position] || 0) + 1;
+                }
+            });
+            const topPositions = Object.entries(positionCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            document.getElementById('topPositions').innerHTML = topPositions.map(([position, count]) => `
+                <div class="top-item">
+                    <span>${position}</span>
+                    <span style="font-weight: 600;">${count}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderGrowthChart() {
+            // Group connections by month
+            const monthlyData = {};
+            connectionsData.forEach(c => {
+                const date = new Date(c.connectedDate);
+                if (!isNaN(date)) {
+                    const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+                    monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+                }
+            });
+
+            // Sort and create cumulative data
+            const sortedMonths = Object.keys(monthlyData).sort();
+            let cumulative = 0;
+            const chartData = sortedMonths.map(month => {
+                cumulative += monthlyData[month];
+                return { month, count: cumulative };
+            });
+
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.map(d => d.month),
+                    datasets: [{
+                        label: 'Total Connections',
+                        data: chartData.map(d => d.count),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
